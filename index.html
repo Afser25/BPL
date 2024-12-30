@@ -1,1 +1,284 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custom Media Player</title>
+  <style>
+    /* Body and Background Styling */
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: linear-gradient(to right, #ff7e5f, #feb47b); /* Stylish gradient background */
+      font-family: 'Arial', sans-serif;
+    }
+
+  
+    .media-container {
+      top: 10px;
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      
+      background: rgba(0, 0, 0, 0.6); /* Slight background opacity for better contrast */
+      border-radius: 10px;
+      padding: 0px;
+    }
+
+    .media-player {
+      width: 100%;
+      height: auto;
+      border-radius: 10px;
+      background: black;
+    }
+
+    .thumbnail-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTRTyHEzd4P9ciKTjoNqyGedqNkukEIgYdLrjVmi8_vRJX-0672PsQLtYY&s=10') center / cover no-repeat;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 2;
+      cursor: pointer;
+      border-radius: 10px;
+    }
+
+    .thumbnail-overlay.hidden {
+      display: none;
+    }
+
+    .play-button {
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      font-size: 30px;
+      padding: 15px 25px;
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+
+    .play-button:hover {
+      transform: scale(1.1);
+    }
+
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 3;
+      border-radius: 10px;
+      visibility: hidden;
+      opacity: 0;
+      transition: visibility 0s, opacity 0.3s ease;
+    }
+
+    .loading-overlay.active {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .spinner {
+      border: 5px solid rgba(255, 255, 255, 0.3);
+      border-top: 5px solid #fff;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .logo {
+      position: absolute;
+      top: -2px;
+      left: 15px;
+      width: 60px;
+      height: 60px;
+      background: url('https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiN_cYCQr1k33CXMPLDk8hToYdepIQxaNAvr96Z8U42-5Sa5FY0VW0pYIBNDUNhKqfEcMFcOlajF-nqnwEnjggaIzGpLorPEKh0G3AxOp_kYKwrulqcXT6wRqDd7n2yCkG-C0YJKJLeJ5VtIS9z-rmPbzzYgdtLifBUcGcVlIEadkXRIyg6NmzdfGeJ6Ds/s3264/20241230_132824.png') center / cover no-repeat;
+      z-index: 4;
+    }
+
+    .live-indicator {
+      position: absolute;
+      top: 15px;
+      left: 85px;
+      display: flex;
+      align-items: center;
+      font-size: 16px;
+      font-weight: bold;
+      color: #fff;
+      z-index: 4;
+    }
+
+    .live-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: red;
+      margin-right: 5px;
+      animation: blink 1s infinite alternate;
+    }
+
+    @keyframes blink {
+      0% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0.3;
+      }
+    }
+
+    .fullscreen-button {
+      position: absolute;
+      bottom: 15px;
+      right: 15px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      font-size: 20px;
+      padding: 10px;
+      cursor: pointer;
+      z-index: 4;
+      border-radius: 5px;
+    }
+
+    /* Footer Section */
+    footer {
+      background-color: #333;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+
+    footer img {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+    }
+
+    footer .admin-info {
+      margin-top: 10px;
+      font-size: 16px;
+    }
+
+    footer .privacy-policy {
+      margin-top: 15px;
+      font-size: 14px;
+    }
+
+    footer a {
+      color: #fff;
+      text-decoration: none;
+      margin-left: 5px;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+  <div class="media-container">
+    <video id="mediaPlayer" class="media-player"></video>
+
+    <div id="thumbnail" class="thumbnail-overlay">
+      <button class="play-button">▶</button>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay">
+      <div class="spinner"></div>
+    </div>
+
+    <div class="logo"></div>
+    <div class="live-indicator">
+      <div class="live-dot"></div>
+      <span>LIVE</span>
+    </div>
+
+    <button id="fullscreenToggle" class="fullscreen-button">⛶</button>
+  </div>
+
+  <!-- Footer Section -->
+  <footer>
+    <div class="admin-info">
+      <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjEu9Q2kQT6t28K3IDrNs0CPbdUzJwRDiqwAwrl1XB1jCA7uY88otF7tOat6HWqmWvEwUxiUCQd3GljbxXKm7PvYmexEJZ_vJRQn7KHQ77bQFYPl6u5aSDlhjJl9n5SbIGB3-eG7tp6QcRAisMyzGuB0opzLUEYHePfA6f1URi3qddC-rC4mOLH3PRoumE/s1080/1709544088771.jpg" alt="Admin Avatar">
+      <p>Admin: Afser Hossian Opu Chowdhury</p>
+      <p>Email: afserhossianopuchowdhury@gmail.com</p>
+    </div>
+    <div class="privacy-policy">
+      <p>By using this service, you agree to our <a href="#">Privacy Policy</a>.</p>
+    </div>
+  </footer>
+
+  <script>
+    const mediaPlayer = document.getElementById("mediaPlayer");
+    const thumbnail = document.getElementById("thumbnail");
+    const loadingOverlay = document.getElementById("loadingOverlay");
+    const fullscreenToggle = document.getElementById("fullscreenToggle");
+    const mediaSource = "https://tiger-hub.vercel.app/Live_tv/T-sports.m3u8";
+
+    if (Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(mediaSource);
+      hls.attachMedia(mediaPlayer);
+    } else if (mediaPlayer.canPlayType("application/vnd.apple.mpegurl")) {
+      mediaPlayer.src = mediaSource;
+    }
+
+    thumbnail.addEventListener("click", () => {
+      thumbnail.classList.add("hidden");
+      loadingOverlay.classList.add("active");
+      mediaPlayer.play();
+    });
+
+    mediaPlayer.addEventListener("playing", () => {
+      loadingOverlay.classList.remove("active");
+    });
+
+    mediaPlayer.addEventListener("canplay", () => {
+      loadingOverlay.classList.remove("active");
+    });
+
+    fullscreenToggle.addEventListener("click", () => {
+      if (!document.fullscreenElement) {
+        if (mediaPlayer.requestFullscreen) {
+          mediaPlayer.requestFullscreen();
+        } else if (mediaPlayer.mozRequestFullScreen) {
+          mediaPlayer.mozRequestFullScreen();
+        } else if (mediaPlayer.webkitRequestFullscreen) {
+          mediaPlayer.webkitRequestFullscreen();
+        }
+        fullscreenToggle.textContent = "⛶";
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+          document.mozCancelFullScreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+        fullscreenToggle.textContent = "⛶";
+      }
+    });
+  </script>
+</body>
+</html>
